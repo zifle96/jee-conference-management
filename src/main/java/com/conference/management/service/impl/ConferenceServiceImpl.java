@@ -8,11 +8,11 @@ import com.conference.management.entity.Participant;
 import com.conference.management.repository.ConferenceRepository;
 import com.conference.management.repository.ParticipantRepository;
 import com.conference.management.service.ConferenceService;
+import org.hibernate.service.spi.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
 @Service
 public class ConferenceServiceImpl implements ConferenceService {
@@ -34,8 +34,6 @@ public class ConferenceServiceImpl implements ConferenceService {
 
     @Override
     public void cancelConference(Long confId) {
-        List<Participant> participantList = participantRepository.getByConferenceId(confId);
-        participantRepository.deleteAllById(participantList.stream().map(Participant::getParticipantId).collect(Collectors.toList()));
         conferenceRepository.deleteById(confId);
     }
 
@@ -44,6 +42,7 @@ public class ConferenceServiceImpl implements ConferenceService {
         Conference conference = conferenceRepository.getReferenceById(confId);
         int availableSeats = Math.toIntExact(Math.subtractExact(conference.getMaxSeats(), (long) conference.getParticipants().size()));
         ConferenceAvailability conferenceAvailability = new ConferenceAvailability();
+        conferenceAvailability.setId(confId);
         conferenceAvailability.setTitle(conference.getTitle());
         conferenceAvailability.setDescription(conference.getDescription());
         conferenceAvailability.setBeginDate(conference.getBeginDate());
@@ -57,20 +56,24 @@ public class ConferenceServiceImpl implements ConferenceService {
 
     @Override
     public Participant addParticipant(Long confId, ParticipantRequest participantRequest) {
-        Participant participant = new Participant();
-        Conference conference = new Conference();
-        conference.setConferenceId(confId);
-        participant.getConferences().add(conference);
-        participant.setFullName(participantRequest.getFullName());
-        participant.setEmail(participantRequest.getEmail());
-        participant.setPhoneNumber(participant.getPhoneNumber());
+        Optional<Conference> conference = conferenceRepository.findById(confId);
+        if (conference.isPresent()) {
+            Participant participant = new Participant();
+            participant.setFullName(participantRequest.getFullName());
+            participant.setEmail(participantRequest.getEmail());
+            participant.setPhoneNumber(participant.getPhoneNumber());
 
-        return participantRepository.save(participant);
+            conference.get().addParticipant(participant);
+            return participantRepository.save(participant);
+        } else throw new ServiceException(String.format("Conference with id %s doesnt exist", confId));
     }
 
     @Override
     public void removeParticipants(Long participantId, Long confId) {
-        //participantRepository.removeByParticipantIdAndConferences(participantId, confId);
-        participantRepository.deleteById(participantId);
+        Optional<Conference> conference = conferenceRepository.findById(confId);
+        if (conference.isPresent()) {
+            conference.get().removeParticipants(participantId);
+            conferenceRepository.save(conference.get());
+        } else throw new ServiceException(String.format("Conference with id %s doesnt exist", confId));
     }
 }

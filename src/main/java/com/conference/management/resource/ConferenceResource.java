@@ -2,9 +2,7 @@ package com.conference.management.resource;
 
 import com.conference.management.dto.ConferenceAvailability;
 import com.conference.management.dto.ConferenceRequest;
-import com.conference.management.dto.ParticipantRequest;
 import com.conference.management.entity.Conference;
-import com.conference.management.entity.Participant;
 import com.conference.management.service.ConferenceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -34,15 +32,4 @@ public class ConferenceResource {
         conferenceService.cancelConference(confId);
     }
 
-    @PostMapping(value = "{confId}/participants", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    @ResponseBody
-    public Participant addParticipants(@PathVariable Long confId, @RequestBody ParticipantRequest participantRequest) {
-        return conferenceService.addParticipant(confId, participantRequest);
-    }
-
-    @DeleteMapping(value = "{confId}/participants/{pId}")
-    public void removeParticipants(@PathVariable Long confId, @PathVariable Long pId) {
-        conferenceService.removeParticipants(pId, confId);
-
-    }
 }
